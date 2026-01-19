@@ -7,13 +7,15 @@
   <style>
     :root { --gem-red: #ff2d55; }
     * { box-sizing: border-box; touch-action: none; user-select: none; }
+    
     body {
       margin: 0; height: 100vh; background: #05070a;
       display: flex; align-items: center; justify-content: center;
-      overflow: hidden; perspective: 1200px;
+      overflow: hidden; perspective: 2000px; /* 增加透视距离，修复电脑端显示 */
       font-family: -apple-system, "PingFang SC", sans-serif;
     }
-    /* 动态模糊背景 */
+
+    /* 动态背景 */
     .bg { 
       position: fixed; inset: 0; z-index: -2; 
       background: url('gem-h5/assets/1.jpg') center/cover; 
@@ -22,41 +24,47 @@
     #particle-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
     
     /* 文案区 */
-    .header { position: absolute; top: 12%; width: 100%; text-align: center; color: #fff; z-index: 10; pointer-events: none; }
-    .header .name { font-size: 3rem; font-weight: 200; letter-spacing: 12px; margin-bottom: 10px; text-shadow: 0 0 15px rgba(255,255,255,0.4); }
-    .header .quote { font-size: 0.85rem; letter-spacing: 4px; color: #cccccc; }
-    .header .line { width: 30px; height: 2px; background: var(--gem-red); margin: 25px auto; box-shadow: 0 0 10px var(--gem-red); }
+    .header { position: absolute; top: 10%; width: 100%; text-align: center; color: #fff; z-index: 10; pointer-events: none; }
+    .header .name { font-size: 3.5rem; font-weight: 200; letter-spacing: 15px; margin-bottom: 10px; text-shadow: 0 0 20px rgba(255,255,255,0.4); }
+    .header .quote { font-size: 0.9rem; letter-spacing: 4px; color: #cccccc; }
+    .header .line { width: 40px; height: 2px; background: var(--gem-red); margin: 20px auto; box-shadow: 0 0 10px var(--gem-red); }
     
+    /* 移动端文案适配 */
     @media screen and (max-width: 768px) {
       .header .name { font-size: 2.2rem; letter-spacing: 8px; }
-      .item { width: 105px; height: 145px; margin-left: -52px; margin-top: -72px; }
+      .item { width: 110px; height: 150px; margin-left: -55px; margin-top: -75px; }
     }
 
-    /* 3D 结构 */
-    #drag-container, #spin-container { position: relative; display: flex; transform-style: preserve-3d; }
-    #drag-container { transform: rotateX(-5deg); }
-    .item { 
-      position: absolute; left: 50%; top: 50%; border-radius: 4px; overflow: hidden; 
-      box-shadow: 0 15px 40px rgba(0,0,0,0.8); 
-      -webkit-box-reflect: below 12px linear-gradient(transparent, rgba(0,0,0,0.1)); 
+    /* 电脑端相册尺寸适配 */
+    @media screen and (min-width: 769px) {
+      .item { width: 180px; height: 250px; margin-left: -90px; margin-top: -125px; }
     }
-    .item img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* 3D 旋转容器 */
+    #drag-container, #spin-container { position: relative; display: flex; transform-style: preserve-3d; }
+    .item { 
+      position: absolute; left: 50%; top: 50%; border-radius: 8px; overflow: hidden; 
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+      -webkit-box-reflect: below 10px linear-gradient(transparent, rgba(0,0,0,0.1));
+      transition: transform 0.5s;
+    }
+    .item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
     
-    #hint { position: fixed; bottom: 40px; color: rgba(255,255,255,0.4); font-size: 10px; letter-spacing: 2px; border: 1px solid rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 20px; z-index: 100; }
+    #hint { position: fixed; bottom: 30px; color: rgba(255,255,255,0.4); font-size: 11px; letter-spacing: 2px; border: 1px solid rgba(255,255,255,0.1); padding: 8px 18px; border-radius: 20px; z-index: 100; transition: 0.3s; }
   </style>
 </head>
-<body onclick="forcePlay()">
+<body onclick="toggleMusic()">
   <div class="bg"></div>
   <canvas id="particle-canvas"></canvas>
-  <div id="hint">Entering the Galaxy...</div>
+  <div id="hint">Click to Play/Pause</div>
   
-  <audio id="audio-player" loop playsinline autoplay src="gem-h5/assets/bgm.MP3"></audio>
+  <audio id="audio-player" loop playsinline src="gem-h5/assets/bgm.MP3"></audio>
 
   <div class="header">
     <div class="name">G.E.M.</div>
     <div class="quote">“ 点亮星辰，乐章永恒 ”</div>
     <div class="line"></div>
-    <div class="quote" style="font-size: 0.6rem; opacity: 0.5;">FROM GLORY TO GLORY</div>
+    <div class="quote" style="font-size: 0.65rem; opacity: 0.6;">FROM GLORY TO GLORY</div>
   </div>
 
   <div id="drag-container">
@@ -66,68 +74,91 @@
   <script>
     const audio = document.getElementById('audio-player');
     const hint = document.getElementById('hint');
-
-    // 1. 修正图片加载逻辑
     const images = ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"];
     const spinContainer = document.getElementById('spin-container');
-    const radius = window.innerWidth < 500 ? window.innerWidth * 0.38 : 420;
 
+    // 1. 动态生成相册并适配电脑/手机半径
+    const radius = window.innerWidth < 768 ? window.innerWidth * 0.4 : 450;
     images.forEach((name, i) => {
       const div = document.createElement('div');
       div.className = 'item';
-      // 核心修正：确保路径为 gem-h5/assets/
       div.style.transform = `rotateY(${i * (360 / images.length)}deg) translateZ(${radius}px)`;
-      div.innerHTML = `<img src="gem-h5/assets/${name}" onerror="this.src='https://via.placeholder.com/150?text=Image+Lost'">`;
+      div.innerHTML = `<img src="gem-h5/assets/${name}" onerror="this.parentElement.style.display='none'">`;
       spinContainer.appendChild(div);
     });
 
-    // 2. 自动播放终极逻辑
-    function forcePlay() {
-      audio.play().then(() => {
-        hint.innerText = "Music On • Enjoy";
-        hint.style.color = "#ff2d55";
-      }).catch(e => console.log("Play blocked"));
+    // 2. 音乐控制逻辑（点击任意位置切换）
+    function toggleMusic() {
+      if (audio.paused) {
+        audio.play().then(() => {
+          hint.innerText = "MUSIC ON";
+          hint.style.color = "#ff2d55";
+          hint.style.borderColor = "#ff2d55";
+        });
+      } else {
+        audio.pause();
+        hint.innerText = "PAUSED";
+        hint.style.color = "rgba(255,255,255,0.4)";
+        hint.style.borderColor = "rgba(255,255,255,0.1)";
+      }
     }
 
-    // 针对微信端自动播放
-    document.addEventListener("WeixinJSBridgeReady", forcePlay, false);
-    window.addEventListener('load', forcePlay);
+    // 3. 自动播放尝试
+    window.addEventListener('load', () => {
+      // 尝试直接播放
+      audio.play().catch(() => {
+        hint.innerText = "TAP TO START MUSIC";
+      });
+    });
 
-    // 3. 旋转动画
+    // 微信环境自动播放补丁
+    document.addEventListener("WeixinJSBridgeReady", () => { audio.play(); }, false);
+
+    // 4. 旋转动画
     let currentAngle = 0;
-    function frame() {
-      currentAngle -= 0.35;
+    function rotate() {
+      currentAngle -= 0.3;
       spinContainer.style.transform = `rotateY(${currentAngle}deg)`;
-      requestAnimationFrame(frame);
+      requestAnimationFrame(rotate);
     }
-    frame();
+    rotate();
 
-    // 4. 北斗粒子特效逻辑
+    // 5. 北斗星粒子特效
     const canvas = document.getElementById('particle-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
-    function init() {
-      canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-      particles = [];
-      for(let i=0; i<80; i++) particles.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, vx: (Math.random()-0.5)*0.5, vy: (Math.random()-0.5)*0.5, r: Math.random()*1.5 });
+    function initCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      particles = Array.from({length: 80}, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        r: Math.random() * 1.5
+      }));
     }
-    function animate() {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = "white";
+    function drawParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
       particles.forEach((p, i) => {
         p.x += p.vx; p.y += p.vy;
-        if(p.x<0 || p.x>canvas.width) p.vx*=-1; if(p.y<0 || p.y>canvas.height) p.vy*=-1;
+        if(p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if(p.y < 0 || p.y > canvas.height) p.vy *= -1;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
-        for(let j=i+1; j<particles.length; j++) {
-          let p2 = particles[j];
-          let d = Math.hypot(p.x-p2.x, p.y-p2.y);
-          if(d < 100) { ctx.strokeStyle = `rgba(255,255,255,${(100-d)/500})`; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); }
+        for(let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const d = Math.hypot(p.x - p2.x, p.y - p2.y);
+          if(d < 120) {
+            ctx.strokeStyle = `rgba(255,255,255,${(120-d)/600})`;
+            ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+          }
         }
       });
-      requestAnimationFrame(animate);
+      requestAnimationFrame(drawParticles);
     }
-    init(); animate();
-    window.onresize = () => location.reload();
+    window.addEventListener('resize', initCanvas);
+    initCanvas(); drawParticles();
   </script>
 </body>
 </html>
