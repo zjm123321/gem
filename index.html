@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <title>G.E.M. | 音乐信仰</title>
+  <title>G.E.M. | 宇宙乐章</title>
   <style>
     :root {
       --gem-red: #ff2d55;
@@ -17,15 +17,20 @@
       font-family: -apple-system, "PingFang SC", sans-serif;
     }
     
+    /* 动态模糊背景 */
     .bg {
       position: fixed; inset: 0; z-index: -2;
       background: url('gem-h5/assets/1.jpg') center/cover;
       filter: blur(50px) brightness(0.2); transform: scale(1.1);
     }
 
-    .stars { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+    /* Canvas 特效层 */
+    #particle-canvas {
+      position: fixed; inset: 0; z-index: -1;
+      pointer-events: none; /* 确保不影响点击事件 */
+    }
 
-    /* 文案区：极致简约 */
+    /* 优雅文案 */
     .header {
       position: absolute; top: 12%; width: 100%; text-align: center; color: #fff; z-index: 10;
       padding: 0 30px; pointer-events: none;
@@ -47,6 +52,7 @@
       .item { width: 180px; height: 260px; margin-left: -90px; margin-top: -130px; }
     }
 
+    /* 3D 旋转结构 */
     #drag-container, #spin-container { position: relative; display: flex; transform-style: preserve-3d; }
     #drag-container { transform: rotateX(-5deg); }
 
@@ -58,23 +64,24 @@
     }
     .item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 
-    /* 播放提示 */
+    /* 底部提示 */
     #hint {
       position: fixed; bottom: 40px; color: rgba(255,255,255,0.4);
       font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
       border: 1px solid rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 20px;
+      transition: all 0.3s;
     }
   </style>
 </head>
-<body>
+<body onclick="handleFirstInteraction()">
   <div class="bg"></div>
-  <div class="stars" id="stars-container"></div> 
+  <canvas id="particle-canvas"></canvas>
 
-  <div id="hint">Click Anywhere to Play Music</div>
-  <audio id="audio-player" loop src="gem-h5/assets/bgm.MP3"></audio>
+  <div id="hint">Auto-playing Music...</div>
+  <audio id="audio-player" loop playsinline src="gem-h5/assets/bgm.MP3"></audio>
 
   <div class="header">
-    <div class="name">G.E.M.</div>
+    <div class="name">G.E.M</div>
     <div class="quote">“ 点亮星辰，乐章永恒 ”</div>
     <div class="line"></div>
     <div class="quote" style="font-size: 0.6rem; opacity: 0.5; font-style: normal;">FROM GLORY TO GLORY</div>
@@ -90,7 +97,7 @@
     const audio = document.getElementById('audio-player');
     const hint = document.getElementById('hint');
     
-    // 适配屏幕半径
+    // 1. 初始化 3D 相册
     const radius = window.innerWidth < 500 ? window.innerWidth * 0.38 : 420;
     images.forEach((src, i) => {
       const div = document.createElement('div');
@@ -100,7 +107,7 @@
       spinContainer.appendChild(div);
     });
 
-    // 自动旋转
+    // 2. 旋转动画
     let currentAngle = 0;
     function frame() {
       currentAngle -= 0.35;
@@ -109,41 +116,112 @@
     }
     frame();
 
-    // 全局交互
-    document.body.onclick = () => {
-      if (audio.paused) {
-        audio.play();
+    // 3. 音乐自动播放及交互逻辑
+    function startMusic() {
+      audio.play().then(() => {
         hint.innerText = "Music On • Enjoy";
         hint.style.color = "var(--gem-red)";
+      }).catch(err => {
+        console.log("Autoplay blocked, waiting for interaction.");
+      });
+    }
+
+    document.addEventListener("WeixinJSBridgeReady", startMusic, false);
+
+    function handleFirstInteraction() {
+      if (audio.paused) {
+        startMusic();
       } else {
         audio.pause();
         hint.innerText = "Music Paused";
         hint.style.color = "rgba(255,255,255,0.4)";
       }
+    }
+
+    window.onload = startMusic;
+
+    // 4. 星光、粒子、北斗星特效（Canvas实现）
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    const numParticles = window.innerWidth * window.innerHeight / 8000; // 粒子数量，根据屏幕大小调整
+
+    function Particle(x, y, radius, color, vx, vy) {
+      this.x = x;
+      this.y = y;
+      this.radius = radius;
+      this.color = color;
+      this.vx = vx;
+      this.vy = vy;
+      this.opacity = Math.random() * 0.8 + 0.2;
+    }
+
+    Particle.prototype.draw = function() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+      ctx.fillStyle = `rgba(${this.color}, ${this.opacity})`;
+      ctx.fill();
     };
 
-    // 星光
-    function createStars() {
-      const container = document.getElementById('stars-container');
-      const numStars = 100;
-      for (let i = 0; i < numStars; i++) {
-        const star = document.createElement('div');
-        star.style.cssText = `
-          position: absolute; background: white; border-radius: 50%;
-          width: ${Math.random() * 2}px; height: ${Math.random() * 2}px;
-          left: ${Math.random() * 100}%; top: ${Math.random() * 100}%;
-          opacity: ${Math.random()};
-          animation: twinkle ${Math.random() * 3 + 2}s infinite alternate;
-        `;
-        container.appendChild(star);
+    Particle.prototype.update = function() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.opacity -= 0.005; // 粒子逐渐消失
+
+      if (this.opacity < 0.05) { // 粒子消失后重新生成
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.opacity = Math.random() * 0.8 + 0.2;
+        this.vx = (Math.random() - 0.5) * 0.5; // 重新随机速度
+        this.vy = (Math.random() - 0.5) * 0.5;
+      }
+      this.draw();
+    };
+
+    function initParticles() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      particles = [];
+      for (let i = 0; i < numParticles; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const radius = Math.random() * 1.5 + 0.5; // 星星大小
+        const color = "255, 255, 255"; // 白色
+        const vx = (Math.random() - 0.5) * 0.5; // 粒子速度
+        const vy = (Math.random() - 0.5) * 0.5;
+        particles.push(new Particle(x, y, radius, color, vx, vy));
       }
     }
-    const style = document.createElement('style');
-    style.innerHTML = `@keyframes twinkle { from { opacity: 0.2; } to { opacity: 1; } }`;
-    document.head.appendChild(style);
-    createStars();
-    
-    window.onresize = () => location.reload();
+
+    function animateParticles() {
+      requestAnimationFrame(animateParticles);
+      ctx.clearRect(0, 0, canvas.width, canvas.height); // 清除画布
+
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+
+        // 绘制北斗特性 (连接附近星星)
+        for (let j = i; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          const maxConnectDistance = 100; // 连接距离
+          if (distance < maxConnectDistance) {
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(255,255,255,${(maxConnectDistance - distance) / maxConnectDistance * 0.2})`;
+            ctx.lineWidth = 0.5;
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    window.addEventListener('resize', initParticles); // 窗口大小改变时重新初始化
+    initParticles(); // 初始化粒子
+    animateParticles(); // 开始动画
   </script>
 </body>
 </html>
