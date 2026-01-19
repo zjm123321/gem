@@ -29,14 +29,14 @@
     
     @media screen and (max-width: 768px) {
       .header .name { font-size: 2.2rem; letter-spacing: 8px; }
-      /* 调整手机端图片大小 */
       .item { width: 110px; height: 150px; margin-left: -55px; margin-top: -75px; }
-      /* 核心修改：提升手机端按钮高度，避开底部黑条 */
-      #hint { bottom: 12% !important; font-size: 12px !important; padding: 10px 22px !important; }
+      /* 手机端播放器位置 */
+      .player-container { bottom: 12% !important; right: 50% !important; transform: translateX(50%); }
     }
 
     @media screen and (min-width: 769px) {
       .item { width: 180px; height: 250px; margin-left: -90px; margin-top: -125px; }
+      .player-container { bottom: 50px; right: 50px; }
     }
 
     #drag-container, #spin-container { position: relative; display: flex; transform-style: preserve-3d; }
@@ -47,28 +47,65 @@
     }
     .item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
     
-    /* 播放指示按钮 */
-    #hint { 
-      position: fixed; bottom: 30px; 
-      color: rgba(255,255,255,0.5); 
-      font-size: 11px; letter-spacing: 2px; 
-      text-transform: uppercase;
-      border: 1px solid rgba(255,255,255,0.2); 
-      padding: 8px 18px; border-radius: 30px; 
-      z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      background: rgba(0,0,0,0.2);
-      backdrop-filter: blur(5px);
+    /* 高级黑胶播放器样式 */
+    .player-container {
+      position: fixed; z-index: 100;
+      width: 70px; height: 70px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.3s ease;
     }
-    /* 点击时的缩放效果 */
-    .btn-active { transform: scale(0.9); background: rgba(255, 45, 85, 0.2) !important; }
+    
+    .vinyl-record {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      background: #111;
+      padding: 3px;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 0px var(--gem-red);
+      overflow: hidden;
+      animation: rotate-vinyl 5s linear infinite;
+      animation-play-state: paused; /* 默认停止转动 */
+    }
+
+    .vinyl-record img {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      opacity: 0.8;
+    }
+
+    /* 播放时的发光和转动 */
+    .is-playing {
+      animation-play-state: running;
+      box-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 15px var(--gem-red);
+      border-color: var(--gem-red);
+    }
+
+    @keyframes rotate-vinyl {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* 播放状态提示文案 */
+    .music-hint {
+      position: absolute; bottom: -25px; white-space: nowrap;
+      color: rgba(255,255,255,0.4); font-size: 10px; letter-spacing: 2px;
+    }
+
   </style>
 </head>
-<body onclick="toggleMusic()">
+<body onclick="handleGlobalClick(event)">
   <div class="bg"></div>
   <canvas id="particle-canvas"></canvas>
-  <div id="hint">TAP TO START</div>
   
   <audio id="audio-player" loop playsinline src="gem-h5/assets/bgm.MP3"></audio>
+
+  <div class="player-container" id="music-player">
+    <div class="vinyl-record" id="vinyl">
+      <img src="gem-h5/assets/1.jpg" alt="cover">
+    </div>
+    <div class="music-hint" id="status-text">TAP TO PLAY</div>
+  </div>
 
   <div class="header">
     <div class="name">G.E.M.</div>
@@ -83,10 +120,12 @@
 
   <script>
     const audio = document.getElementById('audio-player');
-    const hint = document.getElementById('hint');
+    const vinyl = document.getElementById('vinyl');
+    const statusText = document.getElementById('status-text');
     const images = ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"];
     const spinContainer = document.getElementById('spin-container');
 
+    // 1. 生成 3D 相册
     const radius = window.innerWidth < 768 ? window.innerWidth * 0.4 : 450;
     images.forEach((name, i) => {
       const div = document.createElement('div');
@@ -96,39 +135,44 @@
       spinContainer.appendChild(div);
     });
 
-    // 音乐切换与按钮动画
+    // 2. 核心控制逻辑
     function toggleMusic() {
-      // 按钮点击动效
-      hint.classList.add('btn-active');
-      setTimeout(() => hint.classList.remove('btn-active'), 200);
-
       if (audio.paused) {
         audio.play().then(() => {
-          hint.innerText = "MUSIC ON";
-          hint.style.color = "#ff2d55";
-          hint.style.borderColor = "#ff2d55";
-        }).catch(() => {
-          hint.innerText = "TAP AGAIN TO PLAY";
+          vinyl.classList.add('is-playing');
+          statusText.innerText = "PLAYING";
+          statusText.style.color = "#ff2d55";
         });
       } else {
         audio.pause();
-        hint.innerText = "PAUSED";
-        hint.style.color = "rgba(255,255,255,0.5)";
-        hint.style.borderColor = "rgba(255,255,255,0.2)";
+        vinyl.classList.remove('is-playing');
+        statusText.innerText = "PAUSED";
+        statusText.style.color = "rgba(255,255,255,0.4)";
       }
     }
 
-    // 自动播放尝试
+    // 全局点击判定
+    function handleGlobalClick(e) {
+      // 无论点哪里都切换播放状态，实现便捷控制
+      toggleMusic();
+    }
+
+    // 3. 自动播放与环境适配
     window.addEventListener('load', () => {
       audio.play().then(() => {
-        hint.innerText = "MUSIC ON";
+        vinyl.classList.add('is-playing');
+        statusText.innerText = "PLAYING";
       }).catch(() => {
-        hint.innerText = "TAP TO START";
+        statusText.innerText = "TAP TO START";
       });
     });
 
-    document.addEventListener("WeixinJSBridgeReady", () => { audio.play(); hint.innerText = "MUSIC ON"; }, false);
+    document.addEventListener("WeixinJSBridgeReady", () => {
+      audio.play();
+      vinyl.classList.add('is-playing');
+    }, false);
 
+    // 4. 背景粒子与旋转
     let currentAngle = 0;
     function rotate() {
       currentAngle -= 0.3;
@@ -137,7 +181,6 @@
     }
     rotate();
 
-    // 粒子特效
     const canvas = document.getElementById('particle-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
