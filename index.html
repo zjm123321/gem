@@ -3,29 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <title>G.E.M. 3D 相册</title>
+  <title>G.E.M. 邓紫棋专属相册</title>
   <style>
     * { box-sizing: border-box; touch-action: none; }
     body {
       margin: 0; height: 100vh; background: #0b0f1a;
       display: flex; align-items: center; justify-content: center;
-      overflow: hidden; perspective: 800px; /* 减小透视，让画面更聚拢 */
-      font-family: sans-serif;
+      overflow: hidden; perspective: 900px;
+      font-family: -apple-system, "PingFang SC", sans-serif;
     }
     
-    /* 动态模糊背景 */
+    /* 动态模糊背景，使用第一张照片作为底图 */
     .bg {
       position: fixed; inset: 0; z-index: -1;
       background: url('gem-h5/assets/1.jpg') center/cover;
       filter: blur(25px) brightness(0.3); transform: scale(1.1);
     }
 
+    /* 粉丝文案区 */
     .header {
       position: absolute; top: 8%; width: 100%; text-align: center; color: #fff; z-index: 10;
     }
-    .header h1 { font-size: 1.2rem; margin: 0; letter-spacing: 1px; }
+    .header h1 { font-size: 1.4rem; margin: 0; letter-spacing: 2px; color: #ff2d55; } /* 标志性红 */
+    .header p { font-size: 0.8rem; opacity: 0.7; margin-top: 8px; line-height: 1.5; }
 
-    /* 3D 核心容器 */
+    /* 3D 旋转容器 */
     #drag-container {
       position: relative; display: flex; transform-style: preserve-3d;
       transform: rotateX(-10deg);
@@ -36,31 +38,36 @@
 
     .item {
       position: absolute; left: 50%; top: 50%;
-      /* 手机端图片尺寸进一步缩小 */
       width: 100px; height: 140px; 
       margin-left: -50px; margin-top: -70px;
-      border-radius: 6px; overflow: hidden;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-      -webkit-box-reflect: below 8px linear-gradient(transparent, rgba(0,0,0,0.1));
+      border-radius: 8px; overflow: hidden;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+      /* 倒影效果 */
+      -webkit-box-reflect: below 10px linear-gradient(transparent, rgba(0,0,0,0.15));
     }
     .item img { width: 100%; height: 100%; object-fit: cover; }
 
     /* 音乐按钮 */
     #music-btn {
-      position: fixed; right: 15px; top: 15px; z-index: 100;
-      width: 36px; height: 36px; background: rgba(255,255,255,0.1);
+      position: fixed; right: 20px; top: 20px; z-index: 100;
+      width: 44px; height: 44px; background: rgba(255,255,255,0.15);
       border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      font-size: 16px; border: 1px solid rgba(255,255,255,0.2); color: #fff;
+      font-size: 20px; border: 1px solid rgba(255,255,255,0.2); color: #fff;
     }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes rotateBtn { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="bg"></div>
-  <div id="music-btn">🎵<audio id="audio" loop src="gem-h5/assets/bgm.mp3"></audio></div>
+
+  <div id="music-btn">
+    <span id="music-icon">🎵</span>
+    <audio id="audio-player" loop src="gem-h5/assets/bgm.MP3"></audio>
+  </div>
 
   <div class="header">
-    <h1>G.E.M. 邓紫棋专属相册</h1>
+    <h1>G.E.M. 邓紫棋</h1>
+    <p>“全宇宙最棒的解解”<br>从《泡沫》到《启示录》，你是唯一的信仰</p>
   </div>
 
   <div id="drag-container">
@@ -68,23 +75,21 @@
   </div>
 
   <script>
+    // 你的图片列表
     const images = [
       "gem-h5/assets/1.jpg", "gem-h5/assets/2.jpg", "gem-h5/assets/3.jpg",
       "gem-h5/assets/4.jpg", "gem-h5/assets/5.jpg", "gem-h5/assets/6.jpg"
     ];
 
     const spinContainer = document.getElementById('spin-container');
-    
-    // --- 关键：动态计算半径 ---
-    // 获取屏幕宽度，半径取屏幕宽度的 35% 左右，确保不会超出屏幕
     const screenWidth = window.innerWidth;
+    // 动态计算旋转半径，适配手机屏幕宽度
     const radius = screenWidth * 0.38; 
 
     images.forEach((src, i) => {
       const div = document.createElement('div');
       div.className = 'item';
       const angle = i * (360 / images.length);
-      // 使用动态计算的半径 radius
       div.style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
       div.innerHTML = `<img src="${src}" loading="lazy">`;
       spinContainer.appendChild(div);
@@ -92,22 +97,29 @@
 
     let currentAngle = 0;
     function frame() {
-      currentAngle -= 0.4;
+      currentAngle -= 0.4; // 旋转速度
       spinContainer.style.transform = `rotateY(${currentAngle}deg)`;
       requestAnimationFrame(frame);
     }
     frame();
 
-    // 音乐开关
+    // 音乐播放逻辑
     const btn = document.getElementById('music-btn');
-    const audio = document.getElementById('audio');
+    const audio = document.getElementById('audio-player');
+    const icon = document.getElementById('music-icon');
+
     btn.onclick = () => {
       if (audio.paused) {
-        audio.play().catch(() => { console.log("等待上传bgm.mp3") });
-        btn.style.animation = "spin 3s linear infinite";
+        audio.play().then(() => {
+          btn.style.animation = "rotateBtn 3s linear infinite";
+          icon.innerText = "⏸";
+        }).catch(err => {
+          alert("点击失败！请确认已上传 bgm.MP3 到 assets 文件夹");
+        });
       } else {
         audio.pause();
         btn.style.animation = "none";
+        icon.innerText = "🎵";
       }
     };
   </script>
