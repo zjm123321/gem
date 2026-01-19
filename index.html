@@ -3,97 +3,85 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <title>G.E.M. | 宇宙沉浸</title>
+  <title>G.E.M. | 极光星律</title>
   <style>
-    :root { --gem-red: #ff2d55; }
+    :root { --gem-red: #ff2d55; --glow: rgba(255, 45, 85, 0.6); }
     * { box-sizing: border-box; touch-action: none; user-select: none; }
     
     body {
       margin: 0; height: 100vh; background: #000;
       display: flex; align-items: center; justify-content: center;
-      overflow: hidden; perspective: 2000px;
-      font-family: -apple-system, "PingFang SC", sans-serif;
+      overflow: hidden; perspective: 1500px;
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
     }
 
-    /* 1. 动态亮度遮罩层（模拟亮度变化） */
-    #brightness-overlay {
-      position: fixed; inset: 0; z-index: 50;
-      background: black; opacity: 0;
-      pointer-events: none; transition: opacity 2s ease-in-out;
-    }
-
-    .bg { 
-      position: fixed; inset: 0; z-index: -2; 
-      background: url('gem-h5/assets/1.jpg') center/cover; 
-      filter: blur(50px) brightness(0.2); transform: scale(1.1); 
-    }
-    #particle-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+    /* 背景与特效层级 */
+    #brightness-overlay { position: fixed; inset: 0; z-index: 5; background: black; opacity: 0.3; pointer-events: none; transition: opacity 2s; }
+    .bg { position: fixed; inset: 0; z-index: 1; background: url('gem-h5/assets/1.jpg') center/cover; filter: blur(60px) brightness(0.15); transform: scale(1.2); }
+    #particle-canvas { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
     
-    /* 2. 动态文案区 */
-    .header { position: absolute; top: 10%; width: 100%; text-align: center; color: #fff; z-index: 10; pointer-events: none; }
-    .header .name { font-size: 3.2rem; font-weight: 200; letter-spacing: 12px; margin-bottom: 10px; transition: opacity 1s; }
-    #dynamic-quote { 
-        font-size: 0.85rem; letter-spacing: 4px; color: #aaa; 
-        transition: all 1s ease; min-height: 1.2rem;
-    }
-    .header .line { width: 30px; height: 2px; background: var(--gem-red); margin: 20px auto; }
+    /* 动态文案 */
+    .header { position: absolute; top: 8%; width: 100%; text-align: center; color: #fff; z-index: 10; pointer-events: none; }
+    .header .name { font-size: 3rem; font-weight: 100; letter-spacing: 15px; margin-bottom: 15px; text-shadow: 0 0 20px var(--glow); }
+    #dynamic-quote { font-size: 0.9rem; letter-spacing: 5px; color: #eee; transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1); min-height: 1.5rem; font-weight: 300; }
+    .header .line { width: 40px; height: 1px; background: linear-gradient(90deg, transparent, var(--gem-red), transparent); margin: 25px auto; }
     
-    /* 3D 相册布局保持适配 */
-    @media screen and (max-width: 768px) {
-      .header .name { font-size: 2.2rem; }
-      .item { width: 115px; height: 160px; margin-left: -57px; margin-top: -80px; }
-      .player-box { transform: scale(0.8); bottom: 20px !important; right: 15px !important; }
-    }
-    @media screen and (min-width: 769px) {
-      .item { width: 190px; height: 270px; margin-left: -95px; margin-top: -135px; }
-      .player-box { bottom: 40px; right: 40px; }
-    }
-
-    #spin-container { position: relative; display: flex; transform-style: preserve-3d; transition: transform 0.5s; }
+    /* 3D 相册容器升级 */
+    #drag-container { position: relative; z-index: 20; transform-style: preserve-3d; }
+    #spin-container { position: relative; display: flex; transform-style: preserve-3d; }
     .item { 
-      position: absolute; left: 50%; top: 50%; border-radius: 6px; overflow: hidden; 
-      box-shadow: 0 10px 40px rgba(0,0,0,0.6); 
-      -webkit-box-reflect: below 10px linear-gradient(transparent, rgba(0,0,0,0.1));
+      position: absolute; left: 50%; top: 50%; border-radius: 4px; overflow: hidden; 
+      box-shadow: 0 0 30px rgba(0,0,0,0.8); 
+      border: 1px solid rgba(255,255,255,0.1);
+      -webkit-box-reflect: below 15px linear-gradient(transparent, rgba(0,0,0,0.2));
+      transition: all 0.5s ease;
     }
     .item img { width: 100%; height: 100%; object-fit: cover; }
 
-    /* 3. 高级唱片机组件（拨杆交互） */
-    .player-box { position: fixed; z-index: 100; width: 100px; height: 100px; }
+    @media screen and (max-width: 768px) {
+      .header .name { font-size: 2rem; letter-spacing: 10px; }
+      .item { width: 110px; height: 155px; margin-left: -55px; margin-top: -77px; }
+      /* 修复手机端位置：避开底部 Home 条 */
+      .player-box { bottom: calc(40px + env(safe-area-inset-bottom)) !important; right: 25px !important; transform: scale(0.9); }
+    }
+    @media screen and (min-width: 769px) {
+      .item { width: 180px; height: 260px; margin-left: -90px; margin-top: -130px; }
+      .player-box { bottom: 50px; right: 50px; }
+    }
+
+    /* 拟物化播放器升级 */
+    .player-box { position: fixed; z-index: 100; width: 110px; height: 110px; cursor: pointer; }
     .stylus {
-      position: absolute; top: 0; right: 10px; width: 40px; height: 60px;
+      position: absolute; top: -5px; right: 5px; width: 45px; height: 70px;
       background: url('https://cdn-icons-png.flaticon.com/512/3039/3039414.png') no-repeat center/contain;
-      z-index: 102; transform-origin: top right; transform: rotate(-30deg);
-      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-      filter: invert(1) brightness(0.8);
+      z-index: 102; transform-origin: top right; transform: rotate(-35deg);
+      transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1); filter: invert(1) drop-shadow(0 0 2px black);
     }
     .vinyl-wrapper {
-      width: 85px; height: 85px; border-radius: 50%; background: #111;
-      padding: 4px; border: 3px solid #222; box-shadow: 0 0 15px rgba(0,0,0,1);
-      position: absolute; bottom: 0; left: 0; animation: rotate-vinyl 6s linear infinite; animation-play-state: paused;
+      width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(#222, #050505);
+      padding: 5px; border: 4px solid #1a1a1a; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      position: absolute; bottom: 0; left: 0; animation: rotate-vinyl 8s linear infinite; animation-play-state: paused;
     }
-    .vinyl-wrapper img { width: 100%; height: 100%; border-radius: 50%; opacity: 0.9; border: 1px solid #333; }
+    .vinyl-wrapper img { width: 100%; height: 100%; border-radius: 50%; opacity: 0.8; filter: grayscale(20%); }
     
-    /* 播放器交互状态 */
-    .is-playing .stylus { transform: rotate(5deg); }
-    .is-playing .vinyl-wrapper { animation-play-state: running; box-shadow: 0 0 25px var(--gem-red); border-color: #333; }
+    .is-playing .stylus { transform: rotate(2deg); }
+    .is-playing .vinyl-wrapper { animation-play-state: running; box-shadow: 0 0 30px var(--glow); border-color: #222; }
 
     @keyframes rotate-vinyl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-    /* 辅助文案 */
-    .click-area { position: fixed; inset: 0; z-index: 80; }
+    .click-area { position: fixed; inset: 0; z-index: 30; }
   </style>
 </head>
-<body>
+<body onclick="controlMusic()">
   <div id="brightness-overlay"></div>
   <div class="bg"></div>
   <canvas id="particle-canvas"></canvas>
-  <div class="click-area" onclick="controlMusic()"></div>
+  <div class="click-area"></div>
 
   <audio id="audio-player" loop src="gem-h5/assets/bgm.MP3"></audio>
 
   <div class="header">
     <div class="name">G.E.M.</div>
-    <div id="dynamic-quote">“ 点击星空，开启乐章 ”</div>
+    <div id="dynamic-quote">踏入邓紫棋的音乐宇宙</div>
     <div class="line"></div>
   </div>
 
@@ -113,57 +101,32 @@
     const playerUI = document.getElementById('player-ui');
     const overlay = document.getElementById('brightness-overlay');
     const quoteEl = document.getElementById('dynamic-quote');
-    
-    // 文案库
+    const spinContainer = document.getElementById('spin-container');
+
     const quotes = [
-        "“ 点亮星辰，乐章永恒 ”",
-        "“ 从荣耀走向荣耀 ”",
-        "“ 星辰汇聚成海洋，音符构筑成信仰 ”",
-        "“ Get Everybody Moving ”"
+        "“ 既然来到世界，就要活得灿烂 ”",
+        "“ 每一个音符，都是通往灵魂的星梯 ”",
+        "“ 逆风的方向，更适合飞翔 ”",
+        "“ 在寂静的宇宙，听见爱的回响 ”",
+        "“ FROM GLORY TO GLORY ”"
     ];
-    let quoteIndex = 0;
+    let qIdx = 0;
 
-    // 1. 文案轮播逻辑
-    function cycleQuotes() {
-        setInterval(() => {
-            if(!audio.paused) {
-                quoteEl.style.opacity = 0;
-                setTimeout(() => {
-                    quoteIndex = (quoteIndex + 1) % quotes.length;
-                    quoteEl.innerText = quotes[quoteIndex];
-                    quoteEl.style.opacity = 1;
-                }, 1000);
-            }
-        }, 5000);
-    }
-
-    // 2. 模拟亮度调节 (视觉呼吸感)
-    function simulateBrightness() {
-        setInterval(() => {
-            if(!audio.paused) {
-                // 模拟屏幕微弱的忽明忽暗
-                overlay.style.opacity = Math.random() * 0.3; 
-            } else {
-                overlay.style.opacity = 0.5; // 暂停时变暗
-            }
-        }, 3000);
-    }
-
-    // 3. 音乐控制
+    // 交互与音乐控制
     function controlMusic() {
       if (audio.paused) {
-        audio.play();
-        playerUI.classList.add('is-playing');
-        overlay.style.opacity = 0;
+        audio.play().then(() => {
+          playerUI.classList.add('is-playing');
+          overlay.style.opacity = "0.1";
+        });
       } else {
         audio.pause();
         playerUI.classList.remove('is-playing');
-        overlay.style.opacity = 0.5;
+        overlay.style.opacity = "0.5";
       }
     }
 
-    // 初始化 3D 相册
-    const spinContainer = document.getElementById('spin-container');
+    // 相册生成与升级动效
     const images = ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"];
     const radius = window.innerWidth < 768 ? 160 : 400;
     
@@ -171,50 +134,76 @@
       const div = document.createElement('div');
       div.className = 'item';
       div.style.transform = `rotateY(${i * (360 / images.length)}deg) translateZ(${radius}px)`;
-      div.innerHTML = `<img src="gem-h5/assets/${name}">`;
+      div.innerHTML = `<img src="gem-h5/assets/${name}" onerror="this.src='https://via.placeholder.com/300x400/000/fff?text=G.E.M.'">`;
       spinContainer.appendChild(div);
     });
 
+    // 核心动画循环：旋转 + 呼吸缩放
     let angle = 0;
+    let tick = 0;
     function animate() {
-      angle -= 0.3;
-      spinContainer.style.transform = `rotateY(${angle}deg)`;
+      tick += 0.02;
+      angle -= 0.35;
+      
+      // 升级：相册会随时间产生轻微的径向拉伸感，更具空间律动
+      const breathingRadius = radius + Math.sin(tick) * 15; 
+      const items = document.querySelectorAll('.item');
+      items.forEach((item, i) => {
+          item.style.transform = `rotateY(${i * (360 / images.length) + angle}deg) translateZ(${breathingRadius}px)`;
+      });
+
       requestAnimationFrame(animate);
     }
 
-    // 启动
-    window.onload = () => {
-        animate();
-        cycleQuotes();
-        simulateBrightness();
-    };
+    // 文案轮播
+    setInterval(() => {
+        if(!audio.paused) {
+            quoteEl.style.transform = "translateY(-10px)";
+            quoteEl.style.opacity = "0";
+            setTimeout(() => {
+                qIdx = (qIdx + 1) % quotes.length;
+                quoteEl.innerText = quotes[qIdx];
+                quoteEl.style.transform = "translateY(0)";
+                quoteEl.style.opacity = "1";
+            }, 600);
+        }
+    }, 4500);
 
-    // 粒子背景 (保持原有的高级感)
+    // 粒子特效修复与增强
     const canvas = document.getElementById('particle-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
     function initCanvas() {
       canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-      particles = Array.from({length: 50}, () => ({
+      particles = Array.from({length: 60}, () => ({
         x: Math.random()*canvas.width, y: Math.random()*canvas.height,
-        vx: (Math.random()-0.5)*0.3, vy: (Math.random()-0.5)*0.3, r: Math.random()*1.2
+        vx: (Math.random()-0.5)*0.5, vy: (Math.random()-0.5)*0.5, r: Math.random()*1.8
       }));
     }
     function draw() {
       ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = "rgba(255,255,255,0.4)";
+      ctx.fillStyle = "rgba(255,255,255,0.6)";
       particles.forEach((p, i) => {
         p.x += p.vx; p.y += p.vy;
         if(p.x<0 || p.x>canvas.width) p.vx*=-1; if(p.y<0 || p.y>canvas.height) p.vy*=-1;
         ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+        // 连线特效（北斗星）
         for(let j=i+1; j<particles.length; j++){
             let d = Math.hypot(p.x-particles[j].x, p.y-particles[j].y);
-            if(d<120){ ctx.strokeStyle=`rgba(255,255,255,${(120-d)/800})`; ctx.stroke(); }
+            if(d<130){
+                ctx.strokeStyle=`rgba(255,45,85,${(130-d)/1000})`;
+                ctx.lineWidth = 0.5;
+                ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(particles[j].x,particles[j].y); ctx.stroke();
+            }
         }
       });
       requestAnimationFrame(draw);
     }
-    initCanvas(); draw();
+
+    window.onload = () => {
+        initCanvas(); draw(); animate();
+        document.addEventListener("WeixinJSBridgeReady", () => audio.play(), false);
+    };
     window.onresize = initCanvas;
   </script>
 </body>
