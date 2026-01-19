@@ -2,79 +2,65 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>G.E.M. 邓紫棋专属相册</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>G.E.M. 专属相册</title>
   <style>
-    :root { --accent: #ff2d55; } /* 邓紫棋常用的热情红 */
+    * { touch-action: pan-y; } /* 优化手机触摸 */
     body {
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #0b0f1a;
-      overflow: hidden;
-      perspective: 1200px; /* 3D 深度感 */
+      margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #0b0f1a; overflow: hidden; perspective: 1000px;
       font-family: -apple-system, sans-serif;
     }
-
-    /* 动态背景 */
     .bg {
       position: fixed; inset: 0; z-index: -1;
       background: url('gem-h5/assets/1.jpg') center/cover;
-      filter: blur(30px) brightness(0.3);
-      transform: scale(1.1);
-      transition: background-image 0.8s ease;
+      filter: blur(20px) brightness(0.3); transform: scale(1.1);
     }
-
     .header {
-      position: absolute; top: 10%; text-align: center; color: #fff; z-index: 10;
+      position: absolute; top: 10%; width: 100%; text-align: center; color: #fff; z-index: 10;
     }
-    .header h1 { font-size: 28px; letter-spacing: 2px; margin-bottom: 5px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-    .header p { opacity: 0.8; font-size: 14px; }
+    .header h1 { font-size: 1.5rem; margin: 0; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+    .header p { font-size: 0.8rem; opacity: 0.7; margin-top: 5px; }
 
-    /* 3D 舞台 */
-    #stage {
-      width: 200px; height: 280px;
-      position: relative;
-      transform-style: preserve-3d;
-      transform: rotateX(-10deg);
+    /* 3D 舞台容器 */
+    #drag-container {
+      position: relative; display: flex; margin: auto;
+      transform-style: preserve-3d; transform: rotateX(-10deg);
     }
-
+    #spin-container {
+      position: relative; display: flex; transform-style: preserve-3d;
+    }
     .item {
-      position: absolute; inset: 0;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-      -webkit-box-reflect: below 15px linear-gradient(transparent, rgba(0,0,0,0.2));
-      cursor: pointer;
-      border: 2px solid rgba(255,255,255,0.1);
+      position: absolute; left: 50%; top: 50%;
+      /* 手机端图片尺寸缩小一点，避免撑破屏幕 */
+      width: 120px; height: 160px; 
+      margin-left: -60px; margin-top: -80px;
+      border-radius: 8px; overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+      -webkit-box-reflect: below 10px linear-gradient(transparent, rgba(0,0,0,0.1));
     }
     .item img { width: 100%; height: 100%; object-fit: cover; }
 
-    /* 放大预览 */
-    .viewer {
-      position: fixed; inset: 0; display: none;
-      z-index: 100; align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.9);
+    #music-btn {
+      position: fixed; right: 15px; top: 15px; z-index: 1000;
+      width: 40px; height: 40px; background: rgba(255,255,255,0.15);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; border: 1px solid rgba(255,255,255,0.2);
     }
-    .viewer.show { display: flex; }
-    .viewer img { max-width: 90vw; max-height: 80vh; border-radius: 8px; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <div class="bg" id="bg"></div>
-  
+  <div class="bg"></div>
+  <div id="music-btn">🎵<audio id="audio" loop src="gem-h5/assets/bgm.mp3"></audio></div>
+
   <div class="header">
-    <h1>G.E.M. 邓紫棋 • 唯一的信仰</h1>
-    <p>“全宇宙最棒的歌者，永远的解解”</p>
+    <h1>G.E.M. 邓紫棋</h1>
+    <p>全宇宙最棒的解解</p>
   </div>
 
-  <div id="stage">
-    </div>
-
-  <div class="viewer" id="viewer">
-    <img id="v-img">
+  <div id="drag-container">
+    <div id="spin-container"></div>
   </div>
 
   <script>
@@ -83,42 +69,39 @@
       "gem-h5/assets/4.jpg", "gem-h5/assets/5.jpg", "gem-h5/assets/6.jpg"
     ];
 
-    const stage = document.getElementById('stage');
-    const bg = document.getElementById('bg');
-    const radius = 350; // 旋转半径
+    const spinContainer = document.getElementById('spin-container');
+    // 根据屏幕宽度动态计算旋转半径：手机端约150-200，大屏300
+    const radius = window.innerWidth < 500 ? 160 : 300;
 
-    // 初始化 3D 布局
     images.forEach((src, i) => {
       const div = document.createElement('div');
       div.className = 'item';
+      // 计算每张图的角度
       const angle = i * (360 / images.length);
       div.style.transform = `rotateY(${angle}deg) translateZ(${radius}px)`;
-      
-      const img = document.createElement('img');
-      img.src = src;
-      div.appendChild(img);
-
-      // 点击放大并更换背景
-      div.onclick = () => {
-        document.getElementById('v-img').src = src;
-        document.getElementById('viewer').classList.add('show');
-        bg.style.backgroundImage = `url(${src})`;
-      };
-      stage.appendChild(div);
+      div.innerHTML = `<img src="${src}" loading="lazy">`;
+      spinContainer.appendChild(div);
     });
 
-    // 自动旋转逻辑
     let currentAngle = 0;
-    function rotate() {
-      currentAngle -= 0.3; // 旋转速度
-      stage.style.transform = `rotateX(-10deg) rotateY(${currentAngle}deg)`;
-      requestAnimationFrame(rotate);
+    function frame() {
+      currentAngle -= 0.5; // 旋转速度
+      spinContainer.style.transform = `rotateY(${currentAngle}deg)`;
+      requestAnimationFrame(frame);
     }
-    rotate();
+    frame();
 
-    // 关闭预览
-    document.getElementById('viewer').onclick = function() {
-      this.classList.remove('show');
+    // 音乐控制逻辑
+    const btn = document.getElementById('music-btn');
+    const audio = document.getElementById('audio');
+    btn.onclick = () => {
+      if (audio.paused) {
+        audio.play().catch(() => alert("请先上传 bgm.mp3 到 assets 文件夹"));
+        btn.style.animation = "spin 3s linear infinite";
+      } else {
+        audio.pause();
+        btn.style.animation = "none";
+      }
     };
   </script>
 </body>
