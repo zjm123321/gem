@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>G.E.M. | 宇宙乐章</title>
   <style>
-    :root { --gem-red: #ff2d55; --glass: rgba(255, 255, 255, 0.08); }
+    :root { --gem-red: #ff2d55; }
     * { box-sizing: border-box; touch-action: none; user-select: none; }
     body {
       margin: 0; height: 100vh; background: #05070a;
@@ -13,36 +13,50 @@
       overflow: hidden; perspective: 1200px;
       font-family: -apple-system, "PingFang SC", sans-serif;
     }
-    .bg { position: fixed; inset: 0; z-index: -2; background: url('gem-h5/assets/1.jpg') center/cover; filter: blur(50px) brightness(0.2); transform: scale(1.1); }
+    /* 动态模糊背景 */
+    .bg { 
+      position: fixed; inset: 0; z-index: -2; 
+      background: url('gem-h5/assets/1.jpg') center/cover; 
+      filter: blur(50px) brightness(0.2); transform: scale(1.1); 
+    }
     #particle-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
-    .header { position: absolute; top: 12%; width: 100%; text-align: center; color: #fff; z-index: 10; padding: 0 30px; pointer-events: none; }
-    .header .name { font-size: 3rem; font-weight: 200; letter-spacing: 12px; margin-bottom: 10px; color: #ffffff; text-shadow: 0 0 15px rgba(255,255,255,0.4); }
-    .header .quote { font-size: 0.85rem; letter-spacing: 4px; color: #cccccc; font-weight: 300; }
+    
+    /* 文案区 */
+    .header { position: absolute; top: 12%; width: 100%; text-align: center; color: #fff; z-index: 10; pointer-events: none; }
+    .header .name { font-size: 3rem; font-weight: 200; letter-spacing: 12px; margin-bottom: 10px; text-shadow: 0 0 15px rgba(255,255,255,0.4); }
+    .header .quote { font-size: 0.85rem; letter-spacing: 4px; color: #cccccc; }
     .header .line { width: 30px; height: 2px; background: var(--gem-red); margin: 25px auto; box-shadow: 0 0 10px var(--gem-red); }
     
     @media screen and (max-width: 768px) {
       .header .name { font-size: 2.2rem; letter-spacing: 8px; }
-      .header .quote { font-size: 0.75rem; letter-spacing: 2px; }
       .item { width: 105px; height: 145px; margin-left: -52px; margin-top: -72px; }
     }
+
+    /* 3D 结构 */
     #drag-container, #spin-container { position: relative; display: flex; transform-style: preserve-3d; }
     #drag-container { transform: rotateX(-5deg); }
-    .item { position: absolute; left: 50%; top: 50%; border-radius: 4px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.8); -webkit-box-reflect: below 12px linear-gradient(transparent, rgba(0,0,0,0.1)); }
-    .item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-    #hint { position: fixed; bottom: 40px; color: rgba(255,255,255,0.4); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 20px; transition: all 0.3s; z-index: 100; }
+    .item { 
+      position: absolute; left: 50%; top: 50%; border-radius: 4px; overflow: hidden; 
+      box-shadow: 0 15px 40px rgba(0,0,0,0.8); 
+      -webkit-box-reflect: below 12px linear-gradient(transparent, rgba(0,0,0,0.1)); 
+    }
+    .item img { width: 100%; height: 100%; object-fit: cover; }
+    
+    #hint { position: fixed; bottom: 40px; color: rgba(255,255,255,0.4); font-size: 10px; letter-spacing: 2px; border: 1px solid rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 20px; z-index: 100; }
   </style>
 </head>
-<body>
+<body onclick="forcePlay()">
   <div class="bg"></div>
   <canvas id="particle-canvas"></canvas>
   <div id="hint">Entering the Galaxy...</div>
-  <audio id="audio-player" loop playsinline autoplay x5-video-player-type="h5-page" src="gem-h5/assets/bgm.MP3"></audio>
+  
+  <audio id="audio-player" loop playsinline autoplay src="gem-h5/assets/bgm.MP3"></audio>
 
   <div class="header">
     <div class="name">G.E.M.</div>
     <div class="quote">“ 点亮星辰，乐章永恒 ”</div>
     <div class="line"></div>
-    <div class="quote" style="font-size: 0.6rem; opacity: 0.5; font-style: normal;">FROM GLORY TO GLORY</div>
+    <div class="quote" style="font-size: 0.6rem; opacity: 0.5;">FROM GLORY TO GLORY</div>
   </div>
 
   <div id="drag-container">
@@ -53,47 +67,33 @@
     const audio = document.getElementById('audio-player');
     const hint = document.getElementById('hint');
 
-    // --- 终极自动播放核心逻辑 ---
-    function tryPlay() {
-      audio.play().then(() => {
-        hint.innerText = "Music On • Enjoy";
-        hint.style.color = "#ff2d55";
-      }).catch(e => {
-        // 如果被浏览器拦截，监听全局触摸，一旦用户碰屏幕（即使是滑屏看照片）立即响音乐
-        document.addEventListener('touchstart', () => {
-          audio.play();
-          hint.innerText = "Music On • Enjoy";
-          hint.style.color = "#ff2d55";
-        }, { once: true });
-        document.addEventListener('mousedown', () => {
-          audio.play();
-          hint.innerText = "Music On • Enjoy";
-          hint.style.color = "#ff2d55";
-        }, { once: true });
-      });
-    }
-
-    // 1. 微信端强制唤醒补丁
-    document.addEventListener("WeixinJSBridgeReady", () => {
-      audio.play();
-      hint.innerText = "Music On • Enjoy";
-    }, false);
-
-    // 2. 页面加载尝试播放
-    window.addEventListener('DOMContentLoaded', tryPlay);
-
-    // --- 相册与粒子逻辑保持原样 ---
-    const images = ["gem-h5/assets/1.jpg", "gem-h5/assets/2.jpg", "gem-h5/assets/3.jpg", "gem-h5/assets/4.jpg", "gem-h5/assets/5.jpg", "gem-h5/assets/6.jpg"];
+    // 1. 修正图片加载逻辑
+    const images = ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"];
     const spinContainer = document.getElementById('spin-container');
     const radius = window.innerWidth < 500 ? window.innerWidth * 0.38 : 420;
-    images.forEach((src, i) => {
+
+    images.forEach((name, i) => {
       const div = document.createElement('div');
       div.className = 'item';
+      // 核心修正：确保路径为 gem-h5/assets/
       div.style.transform = `rotateY(${i * (360 / images.length)}deg) translateZ(${radius}px)`;
-      div.innerHTML = `<img src="${src}">`;
+      div.innerHTML = `<img src="gem-h5/assets/${name}" onerror="this.src='https://via.placeholder.com/150?text=Image+Lost'">`;
       spinContainer.appendChild(div);
     });
 
+    // 2. 自动播放终极逻辑
+    function forcePlay() {
+      audio.play().then(() => {
+        hint.innerText = "Music On • Enjoy";
+        hint.style.color = "#ff2d55";
+      }).catch(e => console.log("Play blocked"));
+    }
+
+    // 针对微信端自动播放
+    document.addEventListener("WeixinJSBridgeReady", forcePlay, false);
+    window.addEventListener('load', forcePlay);
+
+    // 3. 旋转动画
     let currentAngle = 0;
     function frame() {
       currentAngle -= 0.35;
@@ -102,41 +102,31 @@
     }
     frame();
 
-    // 粒子特效逻辑
+    // 4. 北斗粒子特效逻辑
     const canvas = document.getElementById('particle-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
-    function initParticles() {
+    function init() {
       canvas.width = window.innerWidth; canvas.height = window.innerHeight;
       particles = [];
-      for(let i=0; i<80; i++) {
-        particles.push({
-          x: Math.random()*canvas.width, y: Math.random()*canvas.height,
-          vx: (Math.random()-0.5)*0.5, vy: (Math.random()-0.5)*0.5,
-          r: Math.random()*1.5
-        });
-      }
+      for(let i=0; i<80; i++) particles.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, vx: (Math.random()-0.5)*0.5, vy: (Math.random()-0.5)*0.5, r: Math.random()*1.5 });
     }
     function animate() {
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle = "white";
       particles.forEach((p, i) => {
         p.x += p.vx; p.y += p.vy;
-        if(p.x<0 || p.x>canvas.width) p.vx*=-1;
-        if(p.y<0 || p.y>canvas.height) p.vy*=-1;
+        if(p.x<0 || p.x>canvas.width) p.vx*=-1; if(p.y<0 || p.y>canvas.height) p.vy*=-1;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
         for(let j=i+1; j<particles.length; j++) {
           let p2 = particles[j];
-          let dist = Math.hypot(p.x-p2.x, p.y-p2.y);
-          if(dist < 100) {
-            ctx.strokeStyle = `rgba(255,255,255,${(100-dist)/500})`;
-            ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
-          }
+          let d = Math.hypot(p.x-p2.x, p.y-p2.y);
+          if(d < 100) { ctx.strokeStyle = `rgba(255,255,255,${(100-d)/500})`; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); }
         }
       });
       requestAnimationFrame(animate);
     }
-    initParticles(); animate();
+    init(); animate();
     window.onresize = () => location.reload();
   </script>
 </body>
