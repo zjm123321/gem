@@ -119,8 +119,8 @@
     <img id="viewerImg" alt="preview">
   </div>
 
-  <script>
-// ✅ 必须包含 gem-h5 前缀，因为你的 assets 文件夹在它里面
+<script>
+    // ✅ 修正后的路径：必须包含 gem-h5/ 文件夹名
     const images = [
       "gem-h5/assets/1.jpg",
       "gem-h5/assets/2.jpg",
@@ -138,16 +138,27 @@
     // 初始化背景
     if(images.length > 0) bg.style.backgroundImage = `url(${images[0]})`;
 
-    // 循环生成卡片
     images.forEach((src, idx) => {
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `
-        <img loading="lazy" src="${src}" alt="photo">
+        <img src="${src}" alt="photo" onerror="this.parentElement.innerHTML='<div style=padding:20px;font-size:12px>图片加载失败<br>路径不对</div>'">
         <div class="badge"># ${idx + 1}</div>
       `;
       
-      // 点击放大逻辑
-      card.
+      card.onclick = () => {
+        viewerImg.src = src;
+        viewer.classList.add('show');
+        bg.style.backgroundImage = `url(${src})`;
+        document.body.style.overflow = 'hidden';
+      };
+      
+      grid.appendChild(card);
+    });
 
+    viewer.onclick = () => {
+      viewer.classList.remove('show');
+      document.body.style.overflow = '';
+    };
+</script>
 
